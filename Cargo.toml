@@ -1,0 +1,16 @@
+[package]
+name = "aredis"
+version = "0.0.1"
+edition = "2021"
+description = "ARedis is a Redis client implemented in Rust."
+license = "Apache-2.0"
+
+[dependencies]
+atoi = "1.0.0"
+bytes = "1.1.0"
+num = "0.4.0"
+tokio = { version = "1.15.0", features = ["full"] }
+
+[dev-dependencies]
+anyhow = "1.0.53"
+time = { version = "0.3.7", features = ["macros"] }

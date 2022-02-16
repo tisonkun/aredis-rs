@@ -1,0 +1,6 @@
+header:
+  license:
+    spdx-id: Apache-2.0
+    copyright-owner: tison <wander4096@gmail.com>
+  paths:
+    - '**/*.rs'
