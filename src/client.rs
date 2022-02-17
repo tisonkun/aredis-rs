@@ -129,7 +129,7 @@ impl Client {
 
 fn match_failure<T>(model: Option<Model>) -> Result<T> {
     match model {
-        Some(Model::Error(e)) => Err(Error::internal(e)),
-        model => Err(Error::internal(format!("unreachable model: {:?}", model))),
+        Some(Model::Error(e)) => Err(Error::Server(e)),
+        model => Err(Error::Internal(format!("unreachable model: {:?}", model))),
     }
 }

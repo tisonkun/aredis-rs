@@ -12,83 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt::Formatter;
+use thiserror::Error;
 
-#[derive(Debug, Copy, Clone)]
-pub enum ErrorCode {
-    Incomplete,
-    Internal,
-    Io,
+pub type ParseResult<T> = Result<T, ParseError>;
+
+#[derive(Debug, Error)]
+pub enum ParseError {
+    #[error("EndOfStream")]
+    EndOfStream,
+    #[error("OtherParseError({0})")]
+    Other(String),
 }
 
-impl ErrorCode {
-    pub fn is_incomplete(&self) -> bool {
-        matches!(self, ErrorCode::Incomplete)
-    }
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error("InternalError({0}")]
+    Internal(String),
+    #[error("ServerError({0})")]
+    Server(String),
 }
 
-#[derive(Debug)]
-pub struct Error {
-    code: ErrorCode,
-    message: String,
-}
-
-impl Error {
-    pub fn code(&self) -> ErrorCode {
-        self.code
-    }
-
-    pub fn message(&self) -> &str {
-        &self.message
-    }
-
-    pub fn new(code: ErrorCode, message: String) -> Self {
-        Self { code, message }
-    }
-
-    pub fn incomplete() -> Self {
-        Self {
-            code: ErrorCode::Incomplete,
-            message: "".to_string(),
-        }
-    }
-
-    pub fn internal<T: ToString>(message: T) -> Self {
-        Self {
-            code: ErrorCode::Internal,
-            message: message.to_string(),
-        }
-    }
-}
-
-impl From<std::io::Error> for Error {
-    fn from(e: std::io::Error) -> Self {
-        Self {
-            code: ErrorCode::Io,
-            message: e.to_string(),
-        }
-    }
-}
-
-impl From<std::string::FromUtf8Error> for Error {
+impl From<std::string::FromUtf8Error> for ParseError {
     fn from(e: std::string::FromUtf8Error) -> Self {
-        Self::internal(e)
+        Self::Other(e.to_string())
     }
 }
 
-impl From<std::num::ParseFloatError> for Error {
+impl From<std::num::ParseFloatError> for ParseError {
     fn from(e: std::num::ParseFloatError) -> Self {
-        Self::internal(e)
+        Self::Other(e.to_string())
     }
 }
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Error")
-            .field("code", &self.code)
-            .field("message", &self.message)
-            .finish()
+impl From<ParseError> for Error {
+    fn from(e: ParseError) -> Self {
+        match e {
+            ParseError::EndOfStream => unreachable!("EndOfStream should be handled internally."),
+            ParseError::Other(reason) => Self::Internal(reason),
+        }
     }
 }
-
-impl std::error::Error for Error {}

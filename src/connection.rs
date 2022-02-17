@@ -20,7 +20,7 @@ use tokio::{
     net::TcpStream,
 };
 
-use crate::{command::Command, model, model::Model, Error, Result};
+use crate::{command::Command, error::ParseError, model, model::Model, Error, Result};
 
 pub struct Connection {
     stream: BufWriter<TcpStream>,
@@ -52,7 +52,7 @@ impl Connection {
                 break if self.buffer.is_empty() {
                     Ok(None)
                 } else {
-                    Err(Error::internal("connection reset by peer"))
+                    Err(Error::Internal("connection reset by peer".to_string()))
                 };
             }
         }
@@ -68,8 +68,8 @@ impl Connection {
                 self.buffer.advance(len);
                 Ok(Some(model))
             }
-            Err(error) if error.code().is_incomplete() => Ok(None),
-            Err(error) => Err(error),
+            Err(ParseError::EndOfStream) => Ok(None),
+            Err(error) => Err(error.into()),
         }
     }
 }

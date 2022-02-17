@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::io::Cursor;
+use std::{cmp::Ordering, io::Cursor};
 
 use bytes::Buf;
 use num::BigInt;
 
-use crate::{Error, Result};
+use crate::error::{ParseError, ParseResult};
 
 #[derive(Debug)]
 pub enum Model {
@@ -36,9 +36,9 @@ pub enum Model {
     BigNum(num::BigInt),
 }
 
-pub fn check(cursor: &mut Cursor<&[u8]>) -> Result<()> {
+pub fn check(cursor: &mut Cursor<&[u8]>) -> ParseResult<()> {
     if !cursor.has_remaining() {
-        return Err(Error::incomplete());
+        return Err(ParseError::EndOfStream);
     }
 
     match cursor.get_u8() {
@@ -47,32 +47,32 @@ pub fn check(cursor: &mut Cursor<&[u8]>) -> Result<()> {
         }
         b'$' | b'=' => {
             let len = readline(cursor)?;
-            let len = atoi::atoi::<i64>(len).ok_or_else(|| Error::internal("malformed"))?;
+            let len = parse_int::<i64>(len)?;
             if len >= 0 {
                 readline(cursor)?;
             }
         }
         b'~' | b'*' | b'>' => {
             let len = readline(cursor)?;
-            let len = atoi::atoi::<i64>(len).ok_or_else(|| Error::internal("malformed"))?;
+            let len = parse_int::<i64>(len)?;
             for _ in 0..len {
                 check(cursor)?;
             }
         }
         b'%' => {
             let len = readline(cursor)?;
-            let len = atoi::atoi::<i64>(len).ok_or_else(|| Error::internal("malformed"))?;
+            let len = parse_int::<i64>(len)?;
             let len = len * 2;
             for _ in 0..len {
                 check(cursor)?;
             }
         }
-        b => return Err(Error::internal(format!("unknown type: {}", b))),
+        b => return Err(ParseError::Other(format!("unknown type: {}", b))),
     }
     Ok(())
 }
 
-pub fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Model> {
+pub fn parse(cursor: &mut Cursor<&[u8]>) -> ParseResult<Model> {
     let model = match cursor.get_u8() {
         b'-' => {
             let error = readline(cursor)?;
@@ -86,10 +86,8 @@ pub fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Model> {
         }
         b':' => {
             let integer = readline(cursor)?;
-            match atoi::atoi::<i64>(integer) {
-                None => Err(Error::internal(format!("malformed integer: {:?}", integer))),
-                Some(i) => Ok(Model::Integer(i)),
-            }
+            let integer = parse_int::<i64>(integer)?;
+            Ok(Model::Integer(integer))
         }
         b',' => {
             let double = readline(cursor)?;
@@ -100,7 +98,7 @@ pub fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Model> {
         b'(' => {
             let bignum = readline(cursor)?;
             match BigInt::parse_bytes(bignum, 10) {
-                None => Err(Error::internal(format!("malformed bignum: {:?}", bignum))),
+                None => Err(ParseError::Other(format!("malformed bignum: {:?}", bignum))),
                 Some(i) => Ok(Model::BigNum(i)),
             }
         }
@@ -109,62 +107,57 @@ pub fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Model> {
             if remaining.is_empty() {
                 Ok(Model::Nil)
             } else {
-                Err(Error::internal(format!("malformed nil: {:?}", remaining)))
+                Err(ParseError::Other(format!("malformed nil: {:?}", remaining)))
             }
         }
         b'#' => {
-            let remaining = readline(cursor)?;
-            if remaining.len() != 1 {
-                Err(Error::internal(format!("malformed bool: {:?}", remaining)))
-            } else if remaining[0].to_ascii_lowercase() == b't' {
+            let b = readline(cursor)?;
+            if b.len() != 1 {
+                Err(ParseError::Other(format!("malformed bool: {:?}", b)))
+            } else if b[0].to_ascii_lowercase() == b't' {
                 Ok(Model::Bool(true))
-            } else if remaining[0].to_ascii_lowercase() == b'f' {
+            } else if b[0].to_ascii_lowercase() == b'f' {
                 Ok(Model::Bool(false))
             } else {
-                Err(Error::internal(format!("malformed bool: {:?}", remaining)))
+                Err(ParseError::Other(format!("malformed bool: {:?}", b)))
             }
         }
         b'$' => {
             let len = readline(cursor)?;
-            match atoi::atoi::<i64>(len) {
-                None => Err(Error::internal(format!("malformed len: {:?}", len))),
-                Some(len) if len < -1 => Err(Error::internal(format!("malformed len: {:?}", len))),
-                Some(len) if len == -1 => Ok(Model::Nil),
-                Some(_) => {
-                    let next = readline(cursor)?;
-                    Ok(Model::String(next.to_vec()))
-                }
+            let len = parse_int::<i64>(len)?;
+            match len.cmp(&-1) {
+                Ordering::Less => Err(ParseError::Other(format!("malformed len: {:?}", len))),
+                Ordering::Equal => Ok(Model::Nil),
+                Ordering::Greater => Ok(Model::String(readline(cursor)?.to_vec())),
             }
         }
         b'=' => {
             let len = readline(cursor)?;
-            match atoi::atoi::<i64>(len) {
-                None => Err(Error::internal(format!("malformed len: {:?}", len))),
-                Some(len) => {
-                    if len == -1 {
-                        Ok(Model::Nil)
-                    } else if len < 4 {
-                        Err(Error::internal(format!("malformed len: {:?}", len)))
-                    } else {
-                        let next = readline(cursor)?;
-                        if next[3] != b':' {
-                            let msg = format!("malformed verbatim string: {:?}", next);
-                            Err(Error::internal(msg))
-                        } else {
-                            let (format, text) = next.split_at(3);
-                            Ok(Model::Verb(format.to_vec(), text[1..].to_vec()))
-                        }
-                    }
+            let len = parse_int::<i64>(len)?;
+            if len == -1 {
+                Ok(Model::Nil)
+            } else if len < 4 {
+                Err(ParseError::Other(format!("malformed len: {:?}", len)))
+            } else {
+                let next = readline(cursor)?;
+                if next[3] != b':' {
+                    Err(ParseError::Other(format!(
+                        "malformed verbatim string: {:?}",
+                        next
+                    )))
+                } else {
+                    let (format, text) = next.split_at(3);
+                    Ok(Model::Verb(format.to_vec(), text[1..].to_vec()))
                 }
             }
         }
         t @ (b'~' | b'*' | b'>') => {
             let len = readline(cursor)?;
-            match atoi::atoi::<i64>(len) {
-                None => Err(Error::internal(format!("malformed len: {:?}", len))),
-                Some(len) if len < -1 => Err(Error::internal(format!("malformed len: {:?}", len))),
-                Some(len) if len == -1 => Ok(Model::Nil),
-                Some(len) => {
+            let len = parse_int::<i64>(len)?;
+            match len.cmp(&-1) {
+                Ordering::Less => Err(ParseError::Other(format!("malformed len: {:?}", len))),
+                Ordering::Equal => Ok(Model::Nil),
+                Ordering::Greater => {
                     let mut vec = Vec::with_capacity(len as usize);
                     for _ in 0..len {
                         vec.push(parse(cursor)?);
@@ -180,11 +173,11 @@ pub fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Model> {
         }
         b'%' => {
             let len = readline(cursor)?;
-            match atoi::atoi::<i64>(len) {
-                None => Err(Error::internal(format!("malformed len: {:?}", len))),
-                Some(len) if len < -1 => Err(Error::internal(format!("malformed len: {:?}", len))),
-                Some(len) if len == -1 => Ok(Model::Nil),
-                Some(len) => {
+            let len = parse_int::<i64>(len)?;
+            match len.cmp(&-1) {
+                Ordering::Less => Err(ParseError::Other(format!("malformed len: {:?}", len))),
+                Ordering::Equal => Ok(Model::Nil),
+                Ordering::Greater => {
                     let mut vec = Vec::with_capacity((2 * len) as usize);
                     for _ in 0..len {
                         let k = parse(cursor)?;
@@ -195,13 +188,13 @@ pub fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Model> {
                 }
             }
         }
-        b => Err(Error::internal(format!("unknown type: {}", b))),
+        b => Err(ParseError::Other(format!("unknown type: {}", b))),
     }?;
 
     Ok(model)
 }
 
-fn readline<'a>(cursor: &mut Cursor<&'a [u8]>) -> Result<&'a [u8]> {
+fn readline<'a>(cursor: &mut Cursor<&'a [u8]>) -> ParseResult<&'a [u8]> {
     let start = cursor.position() as usize;
     let end = cursor.get_ref().len() - 1;
 
@@ -213,5 +206,12 @@ fn readline<'a>(cursor: &mut Cursor<&'a [u8]>) -> Result<&'a [u8]> {
         }
     }
 
-    Err(Error::incomplete())
+    Err(ParseError::EndOfStream)
+}
+
+fn parse_int<T: atoi::FromRadix10SignedChecked>(i: &[u8]) -> ParseResult<T> {
+    match atoi::atoi::<T>(i) {
+        Some(i) => Ok(i),
+        None => Err(ParseError::Other(format!("malformed integer: {:?}", i))),
+    }
 }
