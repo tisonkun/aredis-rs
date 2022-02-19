@@ -23,21 +23,27 @@ struct Lock {
 impl Lock {
     const VALUE_ON_LOCK: &'static [u8] = b"locking";
 
-    pub fn new(client: Client, key: Vec<u8>) -> Self {
-        Self { client, key }
+    pub fn new<K: Into<Vec<u8>>>(client: Client, key: K) -> Self {
+        Self {
+            client,
+            key: key.into(),
+        }
     }
 
     pub async fn acquire(&mut self) -> Result<bool> {
-        let key = self.key.clone();
-        let value = Self::VALUE_ON_LOCK.to_vec();
-        let option = SetOption::default().nx();
-        let result = self.client.set(key, value, option).await?;
+        let result = self
+            .client
+            .set(
+                self.key.clone(),
+                Self::VALUE_ON_LOCK,
+                SetOption::default().nx(),
+            )
+            .await?;
         Ok(result)
     }
 
     pub async fn release(&mut self) -> Result<bool> {
-        let key = self.key.clone();
-        let result = self.client.del(vec![key]).await?;
+        let result = self.client.del(vec![self.key.clone()]).await?;
         Ok(result == 1)
     }
 }
@@ -45,7 +51,7 @@ impl Lock {
 #[tokio::test]
 async fn test_lock() -> Result<()> {
     let client = crate::client().await?;
-    let mut lock = Lock::new(client, "test-lock".as_bytes().to_vec());
+    let mut lock = Lock::new(client, "test-lock");
 
     let got = lock.acquire().await?;
     assert!(got);

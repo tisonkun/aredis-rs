@@ -38,17 +38,25 @@ impl Client {
         }
     }
 
-    pub async fn get(&mut self, key: Vec<u8>) -> Result<Option<Vec<u8>>> {
-        self.connection.send(Get::new(key)).await?;
+    pub async fn get<In, Out>(&mut self, key: In) -> Result<Option<Out>>
+    where
+        In: Into<Vec<u8>>,
+        Out: From<Vec<u8>>,
+    {
+        self.connection.send(Get::new(key.into())).await?;
         match self.connection.recv().await? {
-            Some(Model::String(result)) => Ok(Some(result)),
+            Some(Model::String(result)) => Ok(Some(result.into())),
             Some(Model::Nil) => Ok(None),
             model => match_failure(model),
         }
     }
 
-    pub async fn set(&mut self, key: Vec<u8>, value: Vec<u8>, option: SetOption) -> Result<bool> {
-        let set = option.build(key, value, false);
+    pub async fn set<In0, In1>(&mut self, key: In0, value: In1, option: SetOption) -> Result<bool>
+    where
+        In0: Into<Vec<u8>>,
+        In1: Into<Vec<u8>>,
+    {
+        let set = option.build(key.into(), value.into(), false);
         self.connection.send(set).await?;
         match self.connection.recv().await? {
             Some(Model::Status(status)) if status.eq_ignore_ascii_case("OK") => Ok(true),
@@ -57,17 +65,22 @@ impl Client {
         }
     }
 
-    pub async fn get_set(
+    pub async fn get_set<In0, In1, Out>(
         &mut self,
-        key: Vec<u8>,
-        value: Vec<u8>,
+        key: In0,
+        value: In1,
         option: SetOption,
-    ) -> Result<Option<Vec<u8>>> {
-        let set = option.build(key, value, true);
+    ) -> Result<Option<Out>>
+    where
+        In0: Into<Vec<u8>>,
+        In1: Into<Vec<u8>>,
+        Out: From<Vec<u8>>,
+    {
+        let set = option.build(key.into(), value.into(), true);
         self.connection.send(set).await?;
         match self.connection.recv().await? {
             Some(Model::Nil) => Ok(None),
-            Some(Model::String(result)) => Ok(Some(result)),
+            Some(Model::String(result)) => Ok(Some(result.into())),
             model => match_failure(model),
         }
     }
@@ -80,15 +93,27 @@ impl Client {
         }
     }
 
-    pub async fn del(&mut self, keys: Vec<Vec<u8>>) -> Result<i64> {
+    pub async fn del<In>(&mut self, keys: Vec<In>) -> Result<u64>
+    where
+        In: Into<Vec<u8>>,
+    {
+        let keys = keys.into_iter().map(|k| k.into()).collect();
         self.connection.send(Del::new(keys)).await?;
         match self.connection.recv().await? {
-            Some(Model::Integer(result)) => Ok(result),
+            Some(Model::Integer(result)) if result >= 0 => Ok(result as u64),
             model => match_failure(model),
         }
     }
 
-    pub async fn mset(&mut self, kvs: Vec<(Vec<u8>, Vec<u8>)>) -> Result<()> {
+    pub async fn mset<In0, In1>(&mut self, kvs: Vec<(In0, In1)>) -> Result<()>
+    where
+        In0: Into<Vec<u8>>,
+        In1: Into<Vec<u8>>,
+    {
+        let kvs = kvs
+            .into_iter()
+            .map(|kv| (kv.0.into(), kv.1.into()))
+            .collect();
         self.connection.send(MSet::new(kvs)).await?;
         match self.connection.recv().await? {
             Some(Model::Status(status)) if status.eq_ignore_ascii_case("OK") => Ok(()),
@@ -96,7 +121,15 @@ impl Client {
         }
     }
 
-    pub async fn msetnx(&mut self, kvs: Vec<(Vec<u8>, Vec<u8>)>) -> Result<bool> {
+    pub async fn msetnx<In0, In1>(&mut self, kvs: Vec<(In0, In1)>) -> Result<bool>
+    where
+        In0: Into<Vec<u8>>,
+        In1: Into<Vec<u8>>,
+    {
+        let kvs = kvs
+            .into_iter()
+            .map(|kv| (kv.0.into(), kv.1.into()))
+            .collect();
         self.connection.send(MSetNx::new(kvs)).await?;
         match self.connection.recv().await? {
             Some(Model::Integer(result)) => match result {
@@ -108,7 +141,12 @@ impl Client {
         }
     }
 
-    pub async fn mget(&mut self, keys: Vec<Vec<u8>>) -> Result<Vec<Option<Vec<u8>>>> {
+    pub async fn mget<In, Out>(&mut self, keys: Vec<In>) -> Result<Vec<Option<Out>>>
+    where
+        In: Into<Vec<u8>>,
+        Out: From<Vec<u8>>,
+    {
+        let keys = keys.into_iter().map(|k| k.into()).collect();
         self.connection.send(MGet::new(keys)).await?;
         match self.connection.recv().await? {
             Some(Model::Array(models)) => {
@@ -116,7 +154,7 @@ impl Client {
                 for model in models.into_iter() {
                     match model {
                         Model::Nil => result.push(None),
-                        Model::String(v) => result.push(Some(v)),
+                        Model::String(v) => result.push(Some(v.into())),
                         _ => return match_failure(Some(model)),
                     }
                 }

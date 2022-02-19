@@ -24,20 +24,47 @@ impl Cache {
         Cache { client }
     }
 
-    pub async fn set(&mut self, key: Vec<u8>, value: Vec<u8>) -> Result<()> {
+    pub async fn set<In0, In1>(&mut self, key: In0, value: In1) -> Result<()>
+    where
+        In0: Into<Vec<u8>>,
+        In1: Into<Vec<u8>>,
+    {
         self.client.set(key, value, SetOption::default()).await?;
         Ok(())
     }
 
-    pub async fn get(&mut self, key: Vec<u8>) -> Result<Option<Vec<u8>>> {
+    pub async fn get<In, Out>(&mut self, key: In) -> Result<Option<Out>>
+    where
+        In: Into<Vec<u8>>,
+        Out: From<Vec<u8>>,
+    {
         Ok(self.client.get(key).await?)
     }
 
-    pub async fn update(&mut self, key: Vec<u8>, value: Vec<u8>) -> Result<Option<Vec<u8>>> {
-        Ok(self
-            .client
-            .get_set(key, value, SetOption::default())
-            .await?)
+    pub async fn update<In0, In1, Out>(&mut self, key: In0, value: In1) -> Result<Option<Out>>
+    where
+        In0: Into<Vec<u8>>,
+        In1: Into<Vec<u8>>,
+        Out: From<Vec<u8>>,
+    {
+        let option = SetOption::default();
+        Ok(self.client.get_set(key, value, option).await?)
+    }
+}
+
+#[derive(Debug, PartialOrd, PartialEq)]
+struct Utf8String(String);
+
+impl From<Vec<u8>> for Utf8String {
+    fn from(bytes: Vec<u8>) -> Self {
+        let inner = String::from_utf8(bytes).unwrap();
+        Self(inner)
+    }
+}
+
+impl From<&'static str> for Utf8String {
+    fn from(s: &'static str) -> Self {
+        Self(s.to_string())
     }
 }
 
@@ -46,26 +73,26 @@ async fn test_cache() -> Result<()> {
     let client = crate::client().await?;
     let mut cache = Cache::new(client);
 
-    let key = "greeting-page".as_bytes();
-    let first = "<html><p>hello world</p></html>".as_bytes();
-    let second = "<html><p>good morning</p></html>".as_bytes();
+    let key = "greeting-page";
+    let first = "<html><p>hello world</p></html>";
+    let second = "<html><p>good morning</p></html>";
 
-    let got = cache.get(key.to_vec()).await?;
+    let got: Option<Utf8String> = cache.get(key).await?;
     assert!(got.is_none());
 
-    cache.set(key.to_vec(), first.to_vec()).await?;
+    cache.set(key, first).await?;
 
-    let got = cache.get(key.to_vec()).await?;
+    let got: Option<Utf8String> = cache.get(key).await?;
     assert!(got.is_some());
-    assert_eq!(got.unwrap(), first.to_vec());
+    assert_eq!(got.unwrap(), first.into());
 
-    let got = cache.update(key.to_vec(), second.to_vec()).await?;
+    let got: Option<Utf8String> = cache.update(key, second).await?;
     assert!(got.is_some());
-    assert_eq!(got.unwrap(), first.to_vec());
+    assert_eq!(got.unwrap(), first.into());
 
-    let got = cache.get(key.to_vec()).await?;
+    let got: Option<Utf8String> = cache.get(key).await?;
     assert!(got.is_some());
-    assert_eq!(got.unwrap(), second.to_vec());
+    assert_eq!(got.unwrap(), second.into());
 
     Ok(())
 }

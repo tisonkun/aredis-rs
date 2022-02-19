@@ -43,22 +43,17 @@ impl Article {
         }
     }
 
-    pub async fn create<T: Into<Vec<u8>>>(
-        &mut self,
-        title: T,
-        content: T,
-        author: T,
-    ) -> Result<bool> {
+    pub async fn create<T>(&mut self, title: T, content: T, author: T) -> Result<bool>
+    where
+        T: Into<String>,
+    {
         let offset = time::macros::offset!(+8);
         let created_at = time::OffsetDateTime::now_utc().to_offset(offset);
         let article_data = vec![
-            (self.title_key.as_bytes().to_vec(), title.into()),
-            (self.content_key.as_bytes().to_vec(), content.into()),
-            (self.author_key.as_bytes().to_vec(), author.into()),
-            (
-                self.created_at_key.as_bytes().to_vec(),
-                created_at.to_string().into_bytes(),
-            ),
+            (self.title_key.as_str(), title.into()),
+            (self.content_key.as_str(), content.into()),
+            (self.author_key.as_str(), author.into()),
+            (self.created_at_key.as_str(), created_at.to_string()),
         ];
         let result = self.client.msetnx(article_data).await?;
         Ok(result)
@@ -66,10 +61,10 @@ impl Article {
 
     pub async fn get(&mut self) -> Result<HashMap<String, Option<String>>> {
         let keys = vec![
-            self.title_key.as_bytes().to_vec(),
-            self.content_key.as_bytes().to_vec(),
-            self.author_key.as_bytes().to_vec(),
-            self.created_at_key.as_bytes().to_vec(),
+            self.title_key.as_str(),
+            self.content_key.as_str(),
+            self.author_key.as_str(),
+            self.created_at_key.as_str(),
         ];
         let result = self.client.mget(keys).await?;
         assert_eq!(result.len(), 4);
@@ -95,21 +90,24 @@ impl Article {
         Ok(article)
     }
 
-    pub async fn update<T: Into<Vec<u8>>>(
+    pub async fn update<T>(
         &mut self,
         title: Option<T>,
         content: Option<T>,
         author: Option<T>,
-    ) -> Result<()> {
+    ) -> Result<()>
+    where
+        T: Into<Vec<u8>>,
+    {
         let mut article_data = vec![];
         if let Some(title) = title {
-            article_data.push((self.title_key.as_bytes().to_vec(), title.into()));
+            article_data.push((self.title_key.as_str(), title));
         }
         if let Some(content) = content {
-            article_data.push((self.content_key.as_bytes().to_vec(), content.into()));
+            article_data.push((self.content_key.as_str(), content));
         }
         if let Some(author) = author {
-            article_data.push((self.author_key.as_bytes().to_vec(), author.into()));
+            article_data.push((self.author_key.as_str(), author));
         }
         assert!(!article_data.is_empty());
         self.client.mset(article_data).await?;
