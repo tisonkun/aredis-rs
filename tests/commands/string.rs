@@ -15,6 +15,8 @@
 use anyhow::Result;
 use aredis::command::SetOption;
 
+use crate::Utf8String;
+
 #[tokio::test]
 async fn test_strlen() -> Result<()> {
     let mut client = crate::client().await?;
@@ -26,5 +28,18 @@ async fn test_strlen() -> Result<()> {
     assert_eq!(got, 0);
     let got = client.strlen("nonexisting").await?;
     assert_eq!(got, 0);
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_set_range() -> Result<()> {
+    let mut client = crate::client().await?;
+    client
+        .set("key", "hello world", SetOption::default())
+        .await?;
+    let got = client.set_range("key", 6, "Redis").await?;
+    assert_eq!(got, 11);
+    let got: Option<Utf8String> = client.get("key").await?;
+    assert_eq!(got.unwrap(), "hello Redis".into());
     Ok(())
 }

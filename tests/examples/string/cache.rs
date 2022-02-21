@@ -15,6 +15,8 @@
 use anyhow::Result;
 use aredis::{command::SetOption, Client};
 
+use crate::Utf8String;
+
 struct Cache {
     client: Client,
 }
@@ -49,22 +51,6 @@ impl Cache {
     {
         let option = SetOption::default();
         Ok(self.client.get_set(key, value, option).await?)
-    }
-}
-
-#[derive(Debug, PartialOrd, PartialEq)]
-struct Utf8String(String);
-
-impl From<Vec<u8>> for Utf8String {
-    fn from(bytes: Vec<u8>) -> Self {
-        let inner = String::from_utf8(bytes).unwrap();
-        Self(inner)
-    }
-}
-
-impl From<&'static str> for Utf8String {
-    fn from(s: &'static str) -> Self {
-        Self(s.to_string())
     }
 }
 

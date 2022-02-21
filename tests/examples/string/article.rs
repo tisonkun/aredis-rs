@@ -17,6 +17,8 @@ use std::collections::HashMap;
 use anyhow::Result;
 use aredis::Client;
 
+use crate::Utf8String;
+
 struct Article {
     client: Client,
     id: String,
@@ -113,6 +115,22 @@ impl Article {
         self.client.mset(article_data).await?;
         Ok(())
     }
+
+    pub async fn get_content_len(&mut self) -> Result<u64> {
+        let result = self.client.strlen(self.content_key.as_str()).await?;
+        Ok(result)
+    }
+
+    pub async fn get_content_preview<Out>(&mut self, preview_len: i64) -> Result<Out>
+    where
+        Out: From<Vec<u8>>,
+    {
+        let key = self.content_key.as_str();
+        let start = 0;
+        let end = preview_len - 1;
+        let result = self.client.get_range(key, start, end).await?;
+        Ok(result)
+    }
 }
 
 #[tokio::test]
@@ -135,5 +153,28 @@ async fn test_article() -> Result<()> {
     assert_eq!(got.len(), 5);
     assert_eq!(got.get("author").unwrap(), &Some("brittani".to_string()));
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_article_preview() -> Result<()> {
+    let client = crate::client().await?;
+    let mut article = Article::new(client, 12345);
+
+    let title = "Improving map data on GitHub";
+    let content = "You've been able to view and diff geospatial data on GitHub for a while, \
+        but now, in addition to being able to collaborate on the GeoJSON files \
+        you upload to GitHub, you can now more easily contribute to the underlying, \
+        shared basemap, that provides your data with context.";
+    let author = "benbalter";
+
+    let got = article.create(title, content, author).await?;
+    assert!(got);
+
+    let got = article.get_content_len().await?;
+    assert_eq!(got, 273);
+
+    let got: Utf8String = article.get_content_preview(100).await?;
+    assert_eq!(got.0, content[0..100].to_string());
     Ok(())
 }

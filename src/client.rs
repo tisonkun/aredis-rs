@@ -171,6 +171,39 @@ impl Client {
             model => match_failure(model),
         }
     }
+
+    pub async fn get_range<In, Out>(&mut self, key: In, start: i64, end: i64) -> Result<Out>
+    where
+        In: Into<Vec<u8>>,
+        Out: From<Vec<u8>>,
+    {
+        self.connection
+            .send(GetRange::new(key.into(), start, end))
+            .await?;
+        match self.connection.recv().await? {
+            Some(Model::String(result)) => Ok(result.into()),
+            model => match_failure(model),
+        }
+    }
+
+    pub async fn set_range<In0, In1>(
+        &mut self,
+        key: In0,
+        index: i64,
+        substitute: In1,
+    ) -> Result<u64>
+    where
+        In0: Into<Vec<u8>>,
+        In1: Into<Vec<u8>>,
+    {
+        self.connection
+            .send(SetRange::new(key.into(), index, substitute.into()))
+            .await?;
+        match self.connection.recv().await? {
+            Some(Model::Integer(len)) if len >= 0 => Ok(len as u64),
+            model => match_failure(model),
+        }
+    }
 }
 
 fn match_failure<T>(model: Option<Model>) -> Result<T> {

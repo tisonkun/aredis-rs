@@ -15,22 +15,26 @@
 mod del;
 mod flushall;
 mod get;
+mod getrange;
 mod mget;
 mod mset;
 mod msetnx;
 mod ping;
 mod set;
+mod setrange;
 mod strlen;
 
 use bytes::{BufMut, BytesMut};
 pub use del::Del;
 pub use flushall::FlushAll;
 pub use get::Get;
+pub use getrange::GetRange;
 pub use mget::MGet;
 pub use mset::MSet;
 pub use msetnx::MSetNx;
 pub use ping::Ping;
 pub use set::{Set, SetOption};
+pub use setrange::SetRange;
 pub use strlen::Strlen;
 
 pub trait Command {

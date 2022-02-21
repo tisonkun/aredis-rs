@@ -17,6 +17,22 @@ use aredis::Client;
 mod commands;
 mod examples;
 
+#[derive(Debug, PartialOrd, PartialEq)]
+pub struct Utf8String(String);
+
+impl From<Vec<u8>> for Utf8String {
+    fn from(bytes: Vec<u8>) -> Self {
+        let inner = String::from_utf8(bytes).unwrap();
+        Self(inner)
+    }
+}
+
+impl From<&'static str> for Utf8String {
+    fn from(s: &'static str) -> Self {
+        Self(s.to_string())
+    }
+}
+
 pub async fn client() -> anyhow::Result<Client> {
     let host = option_env!("REDIS_HOST").unwrap_or_else(|| "localhost");
     let port = option_env!("REDIS_PORT").unwrap_or_else(|| "6379");
