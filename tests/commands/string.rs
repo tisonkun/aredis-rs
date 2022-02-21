@@ -12,15 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use aredis::Client;
+use anyhow::Result;
+use aredis::command::SetOption;
 
-mod commands;
-mod examples;
-
-pub async fn client() -> anyhow::Result<Client> {
-    let host = option_env!("REDIS_HOST").unwrap_or_else(|| "localhost");
-    let port = option_env!("REDIS_PORT").unwrap_or_else(|| "6379");
-    let mut client = Client::connect(format!("{}:{}", host, port)).await?;
-    client.flush_all(true).await?;
-    Ok(client)
+#[tokio::test]
+async fn test_strlen() -> Result<()> {
+    let mut client = crate::client().await?;
+    client.set("number", "10086", SetOption::default()).await?;
+    let got = client.strlen("number").await?;
+    assert_eq!(got, 5);
+    client.set("empty", "", SetOption::default()).await?;
+    let got = client.strlen("empty").await?;
+    assert_eq!(got, 0);
+    let got = client.strlen("nonexisting").await?;
+    assert_eq!(got, 0);
+    Ok(())
 }

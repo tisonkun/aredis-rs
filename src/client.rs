@@ -14,10 +14,7 @@
 
 use tokio::net::{TcpStream, ToSocketAddrs};
 
-use crate::{
-    command::{Del, FlushAll, Get, MGet, MSet, MSetNx, Ping, SetOption},
-    Connection, Error, Model, Result,
-};
+use crate::{command::*, Connection, Error, Model, Result};
 
 pub struct Client {
     connection: Connection,
@@ -160,6 +157,17 @@ impl Client {
                 }
                 Ok(result)
             }
+            model => match_failure(model),
+        }
+    }
+
+    pub async fn strlen<In>(&mut self, key: In) -> Result<u64>
+    where
+        In: Into<Vec<u8>>,
+    {
+        self.connection.send(Strlen::new(key.into())).await?;
+        match self.connection.recv().await? {
+            Some(Model::Integer(len)) if len >= 0 => Ok(len as u64),
             model => match_failure(model),
         }
     }

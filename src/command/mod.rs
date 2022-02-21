@@ -20,6 +20,7 @@ mod mset;
 mod msetnx;
 mod ping;
 mod set;
+mod strlen;
 
 use bytes::{BufMut, BytesMut};
 pub use del::Del;
@@ -30,6 +31,7 @@ pub use mset::MSet;
 pub use msetnx::MSetNx;
 pub use ping::Ping;
 pub use set::{Set, SetOption};
+pub use strlen::Strlen;
 
 pub trait Command {
     fn as_bytes(&self) -> Vec<u8>;

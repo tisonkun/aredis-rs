@@ -12,15 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use aredis::Client;
-
-mod commands;
-mod examples;
-
-pub async fn client() -> anyhow::Result<Client> {
-    let host = option_env!("REDIS_HOST").unwrap_or_else(|| "localhost");
-    let port = option_env!("REDIS_PORT").unwrap_or_else(|| "6379");
-    let mut client = Client::connect(format!("{}:{}", host, port)).await?;
-    client.flush_all(true).await?;
-    Ok(client)
-}
+mod string;

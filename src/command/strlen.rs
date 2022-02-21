@@ -12,15 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use aredis::Client;
+use crate::command::{args_to_bytes, Command};
 
-mod commands;
-mod examples;
+pub struct Strlen {
+    key: Vec<u8>,
+}
 
-pub async fn client() -> anyhow::Result<Client> {
-    let host = option_env!("REDIS_HOST").unwrap_or_else(|| "localhost");
-    let port = option_env!("REDIS_PORT").unwrap_or_else(|| "6379");
-    let mut client = Client::connect(format!("{}:{}", host, port)).await?;
-    client.flush_all(true).await?;
-    Ok(client)
+impl Strlen {
+    pub fn new(key: Vec<u8>) -> Self {
+        Strlen { key }
+    }
+}
+
+impl Command for Strlen {
+    fn as_bytes(&self) -> Vec<u8> {
+        args_to_bytes(vec!["STRLEN".as_bytes(), self.key.as_slice()])
+    }
 }
