@@ -14,7 +14,6 @@
 
 use anyhow::Result;
 use aredis::{command::SetOption, Client};
-use serial_test::serial;
 
 use crate::Utf8String;
 
@@ -56,7 +55,7 @@ impl Cache {
 }
 
 #[tokio::test]
-#[serial]
+#[serial_test::serial]
 async fn test_cache() -> Result<()> {
     let client = crate::client().await?;
     let mut cache = Cache::new(client);

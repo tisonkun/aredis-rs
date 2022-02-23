@@ -16,7 +16,6 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use aredis::Client;
-use serial_test::serial;
 
 use crate::Utf8String;
 
@@ -135,7 +134,7 @@ impl Article {
 }
 
 #[tokio::test]
-#[serial]
+#[serial_test::serial]
 async fn test_article() -> Result<()> {
     let client = crate::client().await?;
     let mut article = Article::new(client, 42);
@@ -159,7 +158,7 @@ async fn test_article() -> Result<()> {
 }
 
 #[tokio::test]
-#[serial]
+#[serial_test::serial]
 async fn test_article_preview() -> Result<()> {
     let client = crate::client().await?;
     let mut article = Article::new(client, 12345);

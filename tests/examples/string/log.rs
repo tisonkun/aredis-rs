@@ -14,7 +14,6 @@
 
 use anyhow::Result;
 use aredis::Client;
-use serial_test::serial;
 
 use crate::Utf8String;
 
@@ -60,7 +59,7 @@ impl<K: Into<Vec<u8>> + Copy> Log<K> {
 }
 
 #[tokio::test]
-#[serial]
+#[serial_test::serial]
 async fn test_log() -> Result<()> {
     let client = crate::client().await?;
     let mut log = Log::new(client, "06 Jul");
