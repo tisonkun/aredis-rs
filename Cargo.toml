@@ -1,6 +1,6 @@
 [package]
 name = "aredis"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 description = "ARedis is a Redis client implemented in Rust."
 license = "Apache-2.0"
