@@ -12,7 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod article;
-mod cache;
-mod lock;
-mod log;
+use crate::command::{args_to_bytes, Command};
+
+pub struct Exists {
+    keys: Vec<Vec<u8>>,
+}
+
+impl Exists {
+    pub fn new(keys: Vec<Vec<u8>>) -> Self {
+        Exists { keys }
+    }
+}
+
+impl Command for Exists {
+    fn as_bytes(&self) -> Vec<u8> {
+        let mut args = vec!["EXISTS".as_bytes()];
+        for key in &self.keys {
+            args.push(key.as_slice());
+        }
+        args_to_bytes(args)
+    }
+}

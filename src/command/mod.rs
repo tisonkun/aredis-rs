@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod append;
 mod del;
+mod exists;
 mod flushall;
 mod get;
 mod getrange;
@@ -24,8 +26,10 @@ mod set;
 mod setrange;
 mod strlen;
 
+pub use append::Append;
 use bytes::{BufMut, BytesMut};
 pub use del::Del;
+pub use exists::Exists;
 pub use flushall::FlushAll;
 pub use get::Get;
 pub use getrange::GetRange;

@@ -12,7 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod article;
-mod cache;
-mod lock;
-mod log;
+use crate::command::{args_to_bytes, Command};
+
+pub struct Append {
+    key: Vec<u8>,
+    suffix: Vec<u8>,
+}
+
+impl Append {
+    pub fn new(key: Vec<u8>, suffix: Vec<u8>) -> Self {
+        Append { key, suffix }
+    }
+}
+
+impl Command for Append {
+    fn as_bytes(&self) -> Vec<u8> {
+        args_to_bytes(vec![
+            "APPEND".as_bytes(),
+            self.key.as_slice(),
+            self.suffix.as_slice(),
+        ])
+    }
+}

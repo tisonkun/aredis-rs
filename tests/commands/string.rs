@@ -43,3 +43,22 @@ async fn test_set_range() -> Result<()> {
     assert_eq!(got.unwrap(), "hello Redis".into());
     Ok(())
 }
+
+#[tokio::test]
+async fn test_exists() -> Result<()> {
+    let mut client = crate::client().await?;
+    let got = client.exists(vec!["nonexisting"]).await?;
+    assert_eq!(got, 0);
+
+    client.set("k1", "hello", SetOption::default()).await?;
+    client.set("k2", "world", SetOption::default()).await?;
+    let got = client.exists(vec!["k1"]).await?;
+    assert_eq!(got, 1);
+    let got = client.exists(vec!["k1", "k2"]).await?;
+    assert_eq!(got, 2);
+    let got = client.exists(vec!["k1", "k1"]).await?;
+    assert_eq!(got, 2);
+    let got = client.exists(vec!["k1", "nonexisting"]).await?;
+    assert_eq!(got, 1);
+    Ok(())
+}

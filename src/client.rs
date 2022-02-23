@@ -102,6 +102,18 @@ impl Client {
         }
     }
 
+    pub async fn exists<In>(&mut self, keys: Vec<In>) -> Result<u64>
+    where
+        In: Into<Vec<u8>>,
+    {
+        let keys = keys.into_iter().map(|k| k.into()).collect();
+        self.connection.send(Exists::new(keys)).await?;
+        match self.connection.recv().await? {
+            Some(Model::Integer(result)) if result >= 0 => Ok(result as u64),
+            model => match_failure(model),
+        }
+    }
+
     pub async fn mset<In0, In1>(&mut self, kvs: Vec<(In0, In1)>) -> Result<()>
     where
         In0: Into<Vec<u8>>,
@@ -198,6 +210,20 @@ impl Client {
     {
         self.connection
             .send(SetRange::new(key.into(), index, substitute.into()))
+            .await?;
+        match self.connection.recv().await? {
+            Some(Model::Integer(len)) if len >= 0 => Ok(len as u64),
+            model => match_failure(model),
+        }
+    }
+
+    pub async fn append<In0, In1>(&mut self, key: In0, suffix: In1) -> Result<u64>
+    where
+        In0: Into<Vec<u8>>,
+        In1: Into<Vec<u8>>,
+    {
+        self.connection
+            .send(Append::new(key.into(), suffix.into()))
             .await?;
         match self.connection.recv().await? {
             Some(Model::Integer(len)) if len >= 0 => Ok(len as u64),
