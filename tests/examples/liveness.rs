@@ -13,8 +13,10 @@
 // limitations under the License.
 
 use anyhow::Result;
+use serial_test::serial;
 
 #[tokio::test]
+#[serial]
 async fn test_ping() -> Result<()> {
     let mut client = crate::client().await?;
     let result = client.ping().await?;

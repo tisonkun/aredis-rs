@@ -14,6 +14,7 @@
 
 use anyhow::Result;
 use aredis::{command::SetOption, Client};
+use serial_test::serial;
 
 struct Lock {
     client: Client,
@@ -49,6 +50,7 @@ impl Lock {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_lock() -> Result<()> {
     let client = crate::client().await?;
     let mut lock = Lock::new(client, "test-lock");

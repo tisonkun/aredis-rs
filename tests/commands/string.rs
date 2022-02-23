@@ -14,10 +14,12 @@
 
 use anyhow::Result;
 use aredis::command::SetOption;
+use serial_test::serial;
 
 use crate::Utf8String;
 
 #[tokio::test]
+#[serial]
 async fn test_strlen() -> Result<()> {
     let mut client = crate::client().await?;
     client.set("number", "10086", SetOption::default()).await?;
@@ -32,6 +34,7 @@ async fn test_strlen() -> Result<()> {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_set_range() -> Result<()> {
     let mut client = crate::client().await?;
     client
@@ -45,6 +48,7 @@ async fn test_set_range() -> Result<()> {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_exists() -> Result<()> {
     let mut client = crate::client().await?;
     let got = client.exists(vec!["nonexisting"]).await?;
