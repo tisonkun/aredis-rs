@@ -1,9 +1,12 @@
 [package]
 name = "aredis"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 description = "ARedis is a Redis client implemented in Rust."
 license = "Apache-2.0"
+repository = "https://github.com/tisonkun/aredis-rs"
+keywords = ["redis", "client", "tokio"]
+categories = ["asynchronous", "caching"]
 
 [dependencies]
 atoi = "1.0.0"
