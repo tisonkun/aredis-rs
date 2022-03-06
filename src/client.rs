@@ -230,6 +230,71 @@ impl Client {
             model => match_failure(model),
         }
     }
+
+    pub async fn incr<In>(&mut self, key: In) -> Result<i64>
+    where
+        In: Into<Vec<u8>>,
+    {
+        self.connection.send(Incr::new(key.into())).await?;
+        match self.connection.recv().await? {
+            Some(Model::Integer(result)) => Ok(result),
+            model => match_failure(model),
+        }
+    }
+
+    pub async fn incr_by<In>(&mut self, key: In, increment: i64) -> Result<i64>
+    where
+        In: Into<Vec<u8>>,
+    {
+        self.connection
+            .send(IncrBy::new(key.into(), increment))
+            .await?;
+        match self.connection.recv().await? {
+            Some(Model::Integer(result)) => Ok(result),
+            model => match_failure(model),
+        }
+    }
+
+    pub async fn incr_by_float<In, Out>(&mut self, key: In, increment: f64) -> Result<f64>
+    where
+        In: Into<Vec<u8>>,
+    {
+        self.connection
+            .send(IncrByFloat::new(key.into(), increment))
+            .await?;
+        match self.connection.recv().await? {
+            Some(Model::String(result)) => {
+                let result = String::from_utf8(result)?;
+                let result = result.parse()?;
+                Ok(result)
+            }
+            model => match_failure(model),
+        }
+    }
+
+    pub async fn decr<In>(&mut self, key: In) -> Result<i64>
+    where
+        In: Into<Vec<u8>>,
+    {
+        self.connection.send(Decr::new(key.into())).await?;
+        match self.connection.recv().await? {
+            Some(Model::Integer(result)) => Ok(result),
+            model => match_failure(model),
+        }
+    }
+
+    pub async fn decr_by<In>(&mut self, key: In, decrement: i64) -> Result<i64>
+    where
+        In: Into<Vec<u8>>,
+    {
+        self.connection
+            .send(DecrBy::new(key.into(), decrement))
+            .await?;
+        match self.connection.recv().await? {
+            Some(Model::Integer(result)) => Ok(result),
+            model => match_failure(model),
+        }
+    }
 }
 
 fn match_failure<T>(model: Option<Model>) -> Result<T> {

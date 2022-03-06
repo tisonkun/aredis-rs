@@ -13,11 +13,16 @@
 // limitations under the License.
 
 mod append;
+mod decr;
+mod decrby;
 mod del;
 mod exists;
 mod flushall;
 mod get;
 mod getrange;
+mod incr;
+mod incrby;
+mod incrbyfloat;
 mod mget;
 mod mset;
 mod msetnx;
@@ -28,11 +33,16 @@ mod strlen;
 
 pub use append::Append;
 use bytes::{BufMut, BytesMut};
+pub use decr::Decr;
+pub use decrby::DecrBy;
 pub use del::Del;
 pub use exists::Exists;
 pub use flushall::FlushAll;
 pub use get::Get;
 pub use getrange::GetRange;
+pub use incr::Incr;
+pub use incrby::IncrBy;
+pub use incrbyfloat::IncrByFloat;
 pub use mget::MGet;
 pub use mset::MSet;
 pub use msetnx::MSetNx;

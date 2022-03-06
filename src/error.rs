@@ -46,9 +46,9 @@ impl From<std::num::ParseFloatError> for ParseError {
     }
 }
 
-impl From<ParseError> for Error {
-    fn from(e: ParseError) -> Self {
-        match e {
+impl<E: Into<ParseError>> From<E> for Error {
+    fn from(e: E) -> Self {
+        match e.into() {
             ParseError::EndOfStream => unreachable!("EndOfStream should be handled internally."),
             ParseError::Other(reason) => Self::Internal(reason),
         }

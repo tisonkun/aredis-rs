@@ -12,8 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod article;
-mod cache;
-mod id_generator;
-mod lock;
-mod log;
+use crate::command::{args_to_bytes, Command};
+
+pub struct DecrBy {
+    key: Vec<u8>,
+    decrement: i64,
+}
+
+impl DecrBy {
+    pub fn new(key: Vec<u8>, decrement: i64) -> Self {
+        DecrBy { key, decrement }
+    }
+}
+
+impl Command for DecrBy {
+    fn as_bytes(&self) -> Vec<u8> {
+        args_to_bytes(vec![
+            "DECRBY".as_bytes(),
+            self.key.as_slice(),
+            self.decrement.to_string().as_bytes(),
+        ])
+    }
+}

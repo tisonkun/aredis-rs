@@ -12,8 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod article;
-mod cache;
-mod id_generator;
-mod lock;
-mod log;
+use crate::command::{args_to_bytes, Command};
+
+pub struct Incr {
+    key: Vec<u8>,
+}
+
+impl Incr {
+    pub fn new(key: Vec<u8>) -> Self {
+        Incr { key }
+    }
+}
+
+impl Command for Incr {
+    fn as_bytes(&self) -> Vec<u8> {
+        args_to_bytes(vec!["INCR".as_bytes(), self.key.as_slice()])
+    }
+}

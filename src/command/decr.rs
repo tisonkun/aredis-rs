@@ -12,8 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod article;
-mod cache;
-mod id_generator;
-mod lock;
-mod log;
+use crate::command::{args_to_bytes, Command};
+
+pub struct Decr {
+    key: Vec<u8>,
+}
+
+impl Decr {
+    pub fn new(key: Vec<u8>) -> Self {
+        Decr { key }
+    }
+}
+
+impl Command for Decr {
+    fn as_bytes(&self) -> Vec<u8> {
+        args_to_bytes(vec!["DECR".as_bytes(), self.key.as_slice()])
+    }
+}
