@@ -14,6 +14,8 @@
 
 #![feature(once_cell)]
 
+extern crate core;
+
 use aredis::Client;
 
 mod commands;

@@ -14,6 +14,8 @@
 
 mod article;
 mod cache;
+mod counter;
 mod id_generator;
+mod limiter;
 mod lock;
 mod log;
