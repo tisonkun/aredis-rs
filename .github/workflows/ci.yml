@@ -52,7 +52,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: install
-          args: taplo-cli
+          args: taplo-cli --locked
       - name: Check TOML
         if: steps.skip-ci.outputs.skip != 'true'
         run: taplo format --check
