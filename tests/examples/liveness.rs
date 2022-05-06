@@ -18,6 +18,6 @@ use anyhow::Result;
 #[serial_test::serial]
 async fn test_ping() -> Result<()> {
     let mut client = crate::client().await?;
-    let result = client.ping().await?;
-    Ok(result)
+    client.ping().await?;
+    Ok(())
 }
