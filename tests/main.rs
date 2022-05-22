@@ -21,7 +21,7 @@ use aredis::Client;
 mod commands;
 mod examples;
 
-#[derive(Debug, PartialOrd, PartialEq)]
+#[derive(Debug, PartialOrd, PartialEq, Eq)]
 pub struct Utf8String(String);
 
 impl From<Vec<u8>> for Utf8String {
